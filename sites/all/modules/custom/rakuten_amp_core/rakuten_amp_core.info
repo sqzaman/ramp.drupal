@@ -1,0 +1,5 @@
+name = Rakuten AMP Core
+description = Kong Dashboard.
+package = Rakuten
+
+core = 7.x

@@ -1,0 +1,193 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: syed.quamruzzaman
+ * Date: 4/23/2016
+ * Time: 1:11 PM
+ */
+
+//define(LANG, 'und');
+/**
+ * Implements hook_permission().
+ */
+function current_posts_permission() {
+    return array(
+        'access test_url content' => array(
+            'title' => t('Access Test URL'),
+        )
+    );
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+function rakuten_apimanager_core_menu() {
+    $items['rakuten/apimanager/test'] = array(
+        'title' => 'Test Url!',
+        'page callback' => 'helloworld_page',
+        'access callback' => TRUE,
+    );
+
+    return $items;
+}
+
+/**
+ * Page callback for /hello.
+ */
+function helloworld_page() {
+    $node = node_load(1, 1, true);
+    print_r($node);exit;
+}
+
+function rakuten_apimanager_core_node_presave($node) {
+    if($node->type =="api"){
+        $node->field___xml['und'][0]['xml'] = getAPIXMLDocuments($node);
+    }
+
+}
+
+function rakuten_apimanager_core_form_alter(&$form, &$form_state, $form_id) {
+    //echo $form_id; //exit;
+    if ($form_id == 'api_node_form') {
+        //print_r($form);
+        $form['field___xml']['#access'] = FALSE;
+       // $form['#after_build'][] = 'rakuten_apimanager_core_create_api_after_build';
+       //print_r($form['field_api_operation']['und'][0]['#element_validate']);
+      //  print_r($form['field_api_basic_settings']['und'][0]['field_basic_settings_attributes']['und'][0]['field_basic_settings_attr_value']['und'][0]['select_other_text_input']['#element_validate']);exit;
+    }
+}
+
+function rakuten_apimanager_core_create_api_after_build($form, &$form_state){
+    print_r($form); exit;
+}
+
+
+function getAPIXMLDocuments($node){
+    //$operationXML = new SimpleXMLElement("<operation></operation>");
+    //print_r ($node); exit;
+    $xml = new SimpleXMLElement("<?xml version=\"1.0\" encoding=\"UTF-8\" ?><operation></operation>");
+
+    $tid = $node->field_api_operation['und'][0]['field_api_operation_scope']['und'][0]['tid'];
+    if(!empty($tid)){
+        $scope_term = taxonomy_term_load($tid) ;
+        $scope = $scope_term->name;
+        $xml->addAttribute('scope', $scope);
+    }
+
+
+
+    $api_api_iprestriction_type = $node->field_api_iprestriction['und'][0]['field_api_iprestriction_type']['und'][0]['value'];
+    $api_api_iprestriction_value= $node->field_api_iprestriction['und'][0]['field_api_iprestriction_value']['und'][0]['value'];
+
+    if(!empty($api_api_iprestriction_type) && !empty($api_api_iprestriction_value) ){
+        $ip_restriction = $xml->addChild('ipRestriction');
+        $ip_restriction->addAttribute($api_api_iprestriction_type, $api_api_iprestriction_value);
+    }
+
+    $other_attributes = $node->field_api_operation['und'][0]['field_api_operation_other_atrr']['und'];
+   // print_r($other_attributes); exit;
+
+    //if(iss)
+    foreach($other_attributes as $other_attribute){
+        //print_r($other_attribute);
+
+        if(is_array($other_attribute)){
+           $key =  $other_attribute['field_api_op_other_attr_name']['und'][0]['value'];
+            $value =  $other_attribute['field_api_op_other_attr_value']['und'][0]['value'];
+            $xml->addAttribute($key, $value);
+            //print_r($other_attribute);
+        }
+    }
+    //exit;
+
+    $api_description = $node->field_api_description['und'][0]['field_api_description_text']['und'][0]['value'];
+    $description = $xml->addChild('description', $api_description);
+    $api_description_attributes = $node->field_api_description['und'][0]['field_api_description_attributes']['und'];
+
+    foreach($api_description_attributes as $api_description_attribute){
+
+        if($api_description_attribute){
+            $key =  $api_description_attribute['field_api_description_attr_name']['und'][0]['value'];
+            $value =  $api_description_attribute['field_api_description_attr_value']['und'][0]['value'];
+            $description->addAttribute($key, $value);
+            //print_r($other_attribute);
+        }
+    }
+
+    $pass_through = true;
+    if($pass_through){
+        $api_type = $xml->addChild('passThrew');
+        $basic_settings_attributes = $node->field_api_basic_settings['und'][0]['field_basic_settings_attributes']['und'];
+        foreach($basic_settings_attributes as $basic_settings_attribute)
+        if(is_array($basic_settings_attribute)){
+            $key =  $basic_settings_attribute['field_basic_settings_attr_name']['und'][0]['value'];
+            $value =  $basic_settings_attribute['field_basic_settings_attr_value']['und'][0]['value'];
+            $api_type->addAttribute($key, $value);
+        }
+
+
+        $timeout_settings = $api_type->addChild('timeout');
+        $api_timeout_attributes = $node->field_api_timeout['und'][0]['field_api_timeout_attributes']['und'];
+        foreach($api_timeout_attributes as $api_timeout_attribute){
+            if(is_array($api_timeout_attribute)){
+                $key =  $api_timeout_attribute['field_api_timeout_attr_name']['und'][0]['value'];
+                $value =  $api_timeout_attribute['field_api_timeout_attr_value']['und'][0]['value'];
+                $timeout_settings->addAttribute($key, $value);
+            }
+        }
+
+
+        //$field_field_api_conn_settings
+        $api_connection_settings = $node->field_api_connection_settings['und'][0]['field_api_connections']['und'];
+        foreach($api_connection_settings as $api_connection_setting){
+            if(is_array($api_connection_setting)){
+                $connection = $api_type->addChild('connection');
+                $environment = $api_connection_setting['field_api_connection_environment']['und'][0]['value'];
+                $connection->addAttribute('env', $environment);
+                $url = $api_connection_setting['field_api_connection_url']['und'][0]['url'];
+                $url_element = $connection->addChild('url', '');
+                $url_element->addAttribute('value', $url);
+                $proxy = $api_connection_setting['field_api_connection_proxy']['und'][0];
+                $proxy_url = $proxy['field_api_connection_proxy_url']['und'][0]['url'];
+                if(!empty($proxy_url)){
+                    $proxy_element = $connection->addChild('proxy' );
+                    $proxy_element->addAttribute('host', $proxy_url);
+                    $proxy_port = $proxy['field_api_connection_proxy_port']['und'][0]['value'];
+                    $proxy_element->addAttribute('port', $proxy_port);
+                }
+            }
+        }
+
+        $api_request_method = $node->field_api_request_method['und'][0]['field_api_method']['und'][0]['value'];
+        $api_type->addChild('method', $api_request_method);
+
+        $api_other_parameters = $node->field_api_other_parameters['und'][0]['field_api_other_req_params']['und'];
+        foreach($api_other_parameters as $api_other_parameter) {
+            if (is_array($api_other_parameter)) {
+                $api_other_req_param_type = $api_other_parameter['field_api_other_req_param_type']['und'][0]['value'];
+                $api_other_req_param_name = $api_other_parameter['field_api_other_req_param_name']['und'][0]['value'];
+                $api_other_req_param_ext_fr = $api_other_parameter['field_api_other_req_param_ext_fr']['und'][0]['value'];
+                $other_request_parameter = $api_type->addChild($api_other_req_param_type);
+                $other_request_parameter->addAttribute('name', $api_other_req_param_name);
+                $other_request_parameter->addAttribute('type', $api_other_req_param_ext_fr);
+                $api_other_req_param_value = $api_other_parameter['field_api_other_req_param_value']['und'][0]['value'];
+                if(!empty($api_other_req_param_value)){
+                    $other_request_parameter->addAttribute('value', $api_other_req_param_value);
+                }
+
+                $api_other_req_param_prefix = $api_other_parameter['field_api_other_req_param_prefix']['und'][0]['value'];
+                if(!empty($api_other_req_param_prefix)){
+                    $other_request_parameter->addAttribute('prefix', $api_other_req_param_prefix);
+                }
+                //$api_other_req_param_ext_fr = $api_other_parameter['field_api_other_req_param_ext_fr']['und'][0]['value'];
+                //field_api_other_req_param_value
+                //field_api_other_req_param_prefix
+            }
+        }
+    }
+
+    return $xml->asXML();
+
+}
+

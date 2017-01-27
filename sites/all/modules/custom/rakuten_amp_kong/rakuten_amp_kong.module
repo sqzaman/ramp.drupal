@@ -1,0 +1,119 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: syed.quamruzzaman
+ * Date: 4/23/2016
+ * Time: 1:11 PM
+ */
+define("KONG_BASE_URL", "http://kong-ent-ubu14.cloudapp.net:8001");
+
+/**
+ * Implements hook_permission().
+ */
+function rakuten_amp_kong_permission() {
+    return array(
+        'add api to kong' => array(
+            'title' => t('Add API to kong'),
+        ),
+        'test api through kong' => array(
+            'title' => t('Test API through kong'),
+        ),
+        'delete api from kong' => array(
+            'title' => t('Delete API from kong'),
+        )
+    );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function rakuten_amp_kong_menu() {
+    $items['rakuten/api/addtokong'] = array(
+        'title' => 'Add API to kong',
+        'page callback' => 'add_api_to_kong',
+        'access arguments' => array('add api to kong'),
+        'type' => MENU_CALLBACK,
+    );
+
+    $items['rakuten/api/test'] = array(
+        'title' => 'Test api through kong',
+        'page callback' => 'test_api_through_kong',
+        'access arguments' => array('test api through kong'),
+        'type' => MENU_CALLBACK,
+    );
+
+    $items['rakuten/api/delete'] = array(
+        'title' => 'Delete API from kong',
+        'page callback' => 'delete_api_from_kong',
+        'access arguments' => array("delete api from kong"),
+        'type' => MENU_CALLBACK,
+    );
+
+    return $items;
+}
+
+/**
+ * Callback for adding APIs
+ */
+function add_api_to_kong(){
+    $kong_url = KONG_BASE_URL."/apis/";
+    $post_data = $_POST;
+    $nid = $post_data['nid'];
+    unset($post_data['nid']);
+    $result = drupal_http_request($kong_url, array(
+        'method' => 'POST',
+        'headers' => array('Content-Type' => 'application/x-www-form-urlencoded'),
+        'data' => http_build_query($post_data),
+    ));
+
+    if($result->code == 201){ // created
+        $node = node_load($nid);
+        $node->field_api_status['und'][0]['value'] = 2;
+        node_save($node);
+    }
+    echo json_encode($result); exit;
+
+}
+
+
+/**
+ * Callback for testing APIs
+ */
+function test_api_through_kong(){
+    $post_data = (object)$_POST;
+    $result = drupal_http_request(KONG_BASE_URL, array(
+        'method' => 'GET',
+        'headers' => array('Host' => $post_data->upstream_url),
+        'data' => http_build_query($post_data),
+    ));
+    unset($result->request);
+    unset($result->data);
+    echo json_encode($result); exit;
+
+}
+
+/**
+ * Callback for listing APIs
+ */
+function get_approved_api_list(){
+    $kong_url = KONG_BASE_URL."/apis/";
+    $result = drupal_http_request($kong_url, array(
+        'method' => 'GET'
+    ));
+    $result = json_decode($result->data);
+    return $result->data;
+}
+
+/**
+ * Callback for delete API
+ */
+function delete_api_from_kong(){
+    $post_data = (object)$_POST;
+    $kong_url = KONG_BASE_URL."/apis/$post_data->name";
+    $result = drupal_http_request($kong_url, array(
+        'method' => 'DELETE'
+    ));
+
+    $result = json_encode($result);
+    echo $result; exit;
+}

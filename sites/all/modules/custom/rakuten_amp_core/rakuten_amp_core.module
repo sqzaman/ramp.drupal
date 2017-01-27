@@ -1,0 +1,83 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: syed.quamruzzaman
+ * Date: 4/23/2016
+ * Time: 1:11 PM
+ */
+
+function rakuten_amp_core_init() {
+    global $base_url;
+    drupal_add_js(array('baseUrl' => $base_url), 'setting');
+}
+/**
+ * Implements hook_permission().
+ */
+function rakuten_amp_core_permission() {
+    return array(
+        'view api list' => array(
+            'title' => t('List of API'),
+        )
+    );
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+function rakuten_amp_core_menu() {
+    $items['rakuten/apis'] = array(
+        'title' => 'Api list',
+        'page callback' => 'api_list',
+        'access arguments' => array('view api list'),
+        'type' => MENU_CALLBACK,
+    );
+
+    return $items;
+}
+
+function api_list(){
+    $node_type = "passthrough_api";
+    $nids = db_query("SELECT nid FROM {node} n LEFT JOIN {field_data_field_api_status}  aps ON(n.nid=aps.entity_id AND aps.entity_type = :entity_type) WHERE n.type = :type and aps.field_api_status_value = :status", array(':type' => $node_type, ':entity_type' => 'node', ':status' => 1))
+        ->fetchCol();
+    $content = theme('api_to_approve', array('nids' => $nids));
+    $content .= theme('api_already_approved', array('apis' => get_approved_api_list()));
+
+    return $content;
+}
+
+
+function rakuten_amp_core_form_alter(&$form, &$form_state, $form_id) {
+
+    if ($form_id == 'passthrough_api_node_form') {
+        $form['title']['#title'] = "API";
+        $form['field_api_status']['#access'] = false;
+        if(!is_array($form['#validate'])){
+            $form['#validate'] = array();
+        }
+        array_unshift($form['#validate'], 'rakuten_amp_core_custom_validate');
+    }
+}
+
+function rakuten_amp_core_custom_validate($form, &$form_state){
+    form_set_value($form['og_group_ref'], array('und' => array(0 => array('target_id' => get_og_group_id()))), $form_state);
+}
+
+/**
+ * Get group node id
+ *
+ * @return group id, in our case a group is a team, and a team is a node, so finally it will return a nid
+ */
+function get_og_group_id(){
+
+    if(!isset($_SESSION['og_session_group'])){
+        global $user;
+        $_SESSION['og_session_group']  = null;
+        $user = user_load($user->uid);
+        if(isset($user->og_user_node[LANGUAGE_NONE]))
+            $_SESSION['og_session_group'] = $user->og_user_node[LANGUAGE_NONE][0]['target_id'];
+    }
+
+    return $_SESSION['og_session_group'];
+}
+

@@ -1,0 +1,1 @@
+<?php print render($content['field___xml']); ?>

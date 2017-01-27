@@ -1,0 +1,5 @@
+name = Rakuten API Manager Core
+description = API manager core functionality.
+package = Rakuten
+
+core = 7.x

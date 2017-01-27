@@ -1,0 +1,6 @@
+docs
+lib/loft_php_lib/*
+!lib/loft_php_lib/src
+!lib/loft_php_lib/composer.json
+lib/loft_php_lib/src/AKlump/LoftLib/*
+!lib/loft_php_lib/src/AKlump/LoftLib/Xml

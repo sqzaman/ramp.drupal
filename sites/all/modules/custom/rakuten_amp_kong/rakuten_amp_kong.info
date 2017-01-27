@@ -1,0 +1,5 @@
+name = Rakuten AMP Kong
+description = Kong Interfacing.
+package = Rakuten
+
+core = 7.x

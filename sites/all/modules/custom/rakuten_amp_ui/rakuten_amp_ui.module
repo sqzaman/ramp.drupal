@@ -1,0 +1,17 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: syed.quamruzzaman
+ * Date: 4/23/2016
+ * Time: 1:11 PM
+ */
+
+/**
+ * Implementation of hook_theme().
+ */
+function rakuten_amp_ui_theme() {
+    return array(
+        'api_to_approve' => array('variables' => array('nids' => NULL), 'template' => 'api-to-approve', 'path' => drupal_get_path('module', 'rakuten_amp_ui') . '/templates'),
+        'api_already_approved' => array('variables' => array('apis' => NULL), 'template' => 'api-already-approved', 'path' => drupal_get_path('module', 'rakuten_amp_ui') . '/templates')
+    );
+}
